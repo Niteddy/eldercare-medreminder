@@ -1,0 +1,25 @@
+{
+  "name": "eldercare-medreminder",
+  "version": "1.0.0",
+  "description": "LINE Bot + LIFF App แจ้งเตือนทานยาผู้สูงอายุ พร้อมระบบ Repeat, Snooze และ Escalation Alert",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "@line/bot-sdk": "^9.4.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "lowdb": "^1.0.0",
+    "node-cron": "^3.0.3",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
