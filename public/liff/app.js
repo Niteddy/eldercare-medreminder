@@ -1,4 +1,5 @@
 let CURRENT_PATIENT_ID = null;
+let CURRENT_CAREGIVER_ID = null;
 
 const dayLabels = { MON: 'จ.', TUE: 'อ.', WED: 'พ.', THU: 'พฤ.', FRI: 'ศ.', SAT: 'ส.', SUN: 'อา.' };
 const statusLabel = { TAKEN: ['ทานแล้ว', 'status-taken'], PENDING: ['รอทาน', 'status-pending'], MISSED: ['ลืมทานยา', 'status-missed'] };
@@ -42,10 +43,28 @@ async function refreshDashboard() {
   document.getElementById('repeatSub').textContent = `ทานซ้ำทุกวัน ${daily} / แบบอื่น ${others}`;
 
   const cg = (data.patient.caregivers || [])[0];
+  CURRENT_CAREGIVER_ID = cg ? cg.caregiverId : null;
   document.getElementById('caregiverName').textContent = cg ? cg.name : 'ยังไม่ผูกบัญชี';
 
   renderTable(data.meds, data.logsToday);
 }
+
+document.getElementById('editCaregiverBtn').onclick = async () => {
+  if (!CURRENT_CAREGIVER_ID) {
+    alert('ยังไม่มีผู้ดูแลผูกบัญชีไว้ — ให้ผู้ดูแลแอดเพื่อนบอทและพิมพ์ "ผูกบัญชีผู้ดูแล" ก่อน');
+    return;
+  }
+  const currentName = document.getElementById('caregiverName').textContent;
+  const newName = prompt('แก้ชื่อผู้ดูแล:', currentName);
+  if (!newName || !newName.trim()) return;
+
+  await fetch(`/api/patients/${CURRENT_PATIENT_ID}/caregivers/${CURRENT_CAREGIVER_ID}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: newName.trim() })
+  });
+  refreshDashboard();
+};
 
 function renderTable(meds, logsToday) {
   const tbody = document.getElementById('medTableBody');

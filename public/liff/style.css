@@ -34,6 +34,8 @@ body {
 .card-green .card-icon { background: #E3F7E9; }
 .card-blue .card-icon { background: #E4EEFF; }
 .card-orange .card-icon { background: #FFF1DE; }
+.edit-caregiver-btn { background: none; border: none; cursor: pointer; font-size: 14px; margin-left: 6px; opacity: 0.6; vertical-align: middle; }
+.edit-caregiver-btn:hover { opacity: 1; }
 
 .panel { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
 .panel-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
