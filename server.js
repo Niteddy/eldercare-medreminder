@@ -49,17 +49,36 @@ async function handleLineEvent(event) {
   if (event.type === 'message' && event.message.type === 'text' && userId) {
     if (event.message.text.trim() === 'ผูกบัญชีผู้ดูแล') {
       const patient = db.get('patients').first().value();
-      const already = (patient.caregivers || []).some((c) => c.lineUserId === userId);
-      if (!already) {
+
+      // ดึงชื่อจริงจากโปรไฟล์ LINE ของผู้ที่กำลังผูกบัญชี แทนการ hardcode ชื่อ
+      let displayName = 'ผู้ดูแล';
+      try {
+        const profile = await client.getProfile(userId);
+        if (profile && profile.displayName) displayName = profile.displayName;
+      } catch (e) {
+        console.warn('[webhook] ดึงโปรไฟล์ LINE ไม่สำเร็จ ใช้ชื่อ default แทน:', e.message);
+      }
+
+      const existing = (patient.caregivers || []).find((c) => c.lineUserId === userId);
+      if (!existing) {
         db.get('patients')
           .find({ patientId: patient.patientId })
           .get('caregivers')
-          .push({ caregiverId: uuidv4(), name: 'ผู้ดูแล', lineUserId: userId })
+          .push({ caregiverId: uuidv4(), name: displayName, lineUserId: userId })
+          .write();
+      } else if (existing.name !== displayName) {
+        // เคยผูกไว้แล้วแต่ชื่อยังไม่ตรง (เช่นเคยเป็นชื่อ default) -> อัปเดตให้ตรงชื่อ LINE ปัจจุบัน
+        db.get('patients')
+          .find({ patientId: patient.patientId })
+          .get('caregivers')
+          .find({ lineUserId: userId })
+          .assign({ name: displayName })
           .write();
       }
+
       await client.pushMessage(userId, {
         type: 'text',
-        text: `ผูกบัญชีผู้ดูแลของคุณ${patient.name} เรียบร้อยแล้วค่ะ ✅\nเปิดแดชบอร์ดได้จากเมนูด้านล่างเลยค่ะ`
+        text: `ผูกบัญชีผู้ดูแลของคุณ${patient.name} เรียบร้อยแล้วค่ะ คุณ${displayName} ✅\nเปิดแดชบอร์ดได้จากเมนูด้านล่างเลยค่ะ`
       });
     }
     return;
@@ -189,6 +208,18 @@ app.put('/api/medications/:medId', (req, res) => {
 app.delete('/api/medications/:medId', (req, res) => {
   db.get('medications').remove({ medId: req.params.medId }).write();
   res.status(204).end();
+});
+
+// แก้ชื่อผู้ดูแล (เผื่อทดสอบคนเดียวโดยไม่ต้องมีบัญชี LINE อีกเครื่อง)
+app.put('/api/patients/:patientId/caregivers/:caregiverId', (req, res) => {
+  const { patientId, caregiverId } = req.params;
+  db.get('patients')
+    .find({ patientId })
+    .get('caregivers')
+    .find({ caregiverId })
+    .assign({ name: req.body.name })
+    .write();
+  res.json(db.get('patients').find({ patientId }).value());
 });
 
 // สรุปสถานะวันนี้ (สำหรับการ์ดแดชบอร์ด: อัตราทานตรงเวลา / จำนวน repeat / ผู้ดูแล)
