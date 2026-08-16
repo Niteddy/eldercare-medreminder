@@ -2,12 +2,12 @@
   "patients": [
     {
       "patientId": "PATIENT_001",
-      "name": "คุณตาบุญมี",
+      "name": "คุณม๊า",
       "lineUserId": null,
       "caregivers": [
         {
           "caregiverId": "CG_001",
-          "name": "คุณสมชาย (ลูกชาย)",
+          "name": "คุณนิ",
           "lineUserId": null
         }
       ]
