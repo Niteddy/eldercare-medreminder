@@ -122,13 +122,67 @@ app.post('/api/patients/:patientId/medications', (req, res) => {
     isActive: true
   };
   db.get('medications').push(med).write();
+
+  // สร้างคิวแจ้งเตือนของ "วันนี้" ให้ทันที ถ้ายาตัวนี้ต้องกินวันนี้พอดี
+  // (ไม่ต้องรอ cron เที่ยงคืน หรือรอเซิร์ฟเวอร์ restart)
+  const today = new Date().toISOString().slice(0, 10);
+  if (scheduler.isDueOnDate(med, today)) {
+    const exists = db.get('medicationLogs').find({ medId: med.medId, date: today }).value();
+    if (!exists) {
+      db.get('medicationLogs')
+        .push({
+          logId: uuidv4(),
+          medId: med.medId,
+          patientId: med.patientId,
+          date: today,
+          scheduledTime: med.time,
+          status: 'PENDING',
+          remindedAt: null,
+          snoozedAt: null,
+          escalatedAt: null,
+          takenAt: null
+        })
+        .write();
+    }
+  }
+
   res.status(201).json(med);
 });
 
 // แก้ไขยา / เปิด-ปิดใช้งาน
 app.put('/api/medications/:medId', (req, res) => {
   db.get('medications').find({ medId: req.params.medId }).assign(req.body).write();
-  res.json(db.get('medications').find({ medId: req.params.medId }).value());
+  const med = db.get('medications').find({ medId: req.params.medId }).value();
+
+  // ซิงก์คิวของ "วันนี้" ให้ตรงกับข้อมูลล่าสุดทันที (ถ้ายังไม่เคยแจ้งเตือนไปแล้ว)
+  const today = new Date().toISOString().slice(0, 10);
+  const todayLog = db.get('medicationLogs').find({ medId: med.medId, date: today }).value();
+  const dueToday = scheduler.isDueOnDate(med, today);
+
+  if (todayLog && !todayLog.remindedAt) {
+    if (dueToday) {
+      db.get('medicationLogs').find({ logId: todayLog.logId }).assign({ scheduledTime: med.time }).write();
+    } else {
+      db.get('medicationLogs').remove({ logId: todayLog.logId }).write();
+    }
+  } else if (!todayLog && dueToday) {
+    db.get('medicationLogs')
+      .push({
+        logId: uuidv4(),
+        medId: med.medId,
+        patientId: med.patientId,
+        date: today,
+        scheduledTime: med.time,
+        status: 'PENDING',
+        remindedAt: null,
+        snoozedAt: null,
+        escalatedAt: null,
+        takenAt: null
+      })
+      .write();
+  }
+
+  res.json(med);
 });
 
 // ลบยา
