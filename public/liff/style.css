@@ -1,0 +1,71 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Noto Sans Thai", "Segoe UI", sans-serif;
+  background: #f3f6f4;
+  color: #222;
+}
+
+.topbar {
+  background: linear-gradient(135deg, #1DB446, #16913a);
+  color: #fff;
+  padding: 18px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand .logo { font-size: 32px; }
+.brand h1 { margin: 0; font-size: 20px; }
+.brand p { margin: 2px 0 0; font-size: 13px; opacity: 0.9; }
+.profile { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.profile img { width: 32px; height: 32px; border-radius: 50%; }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.card { background: #fff; border-radius: 14px; padding: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.card-label { margin: 0; font-size: 13px; color: #666; }
+.card-value { margin: 6px 0 2px; font-size: 26px; font-weight: 700; }
+.card-sub { margin: 0; font-size: 12px; color: #888; }
+.card-icon { font-size: 26px; width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.card-green .card-icon { background: #E3F7E9; }
+.card-blue .card-icon { background: #E4EEFF; }
+.card-orange .card-icon { background: #FFF1DE; }
+
+.panel { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.panel-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.panel-header h2 { margin: 0; font-size: 17px; }
+
+.btn-primary { background: #1DB446; color: #fff; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.btn-primary:hover { background: #17913a; }
+.btn-secondary { background: #eee; color: #333; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+
+.med-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.med-table th { text-align: left; color: #888; font-weight: 600; padding: 10px 8px; border-bottom: 2px solid #f0f0f0; font-size: 12px; }
+.med-table td { padding: 12px 8px; border-bottom: 1px solid #f4f4f4; vertical-align: middle; }
+.med-name { display: flex; align-items: center; gap: 8px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: #1DB446; display: inline-block; }
+.tag { background: #FFF4D6; color: #b8860b; padding: 3px 10px; border-radius: 20px; font-size: 12px; }
+.tag-repeat { color: #1DB446; font-weight: 600; }
+.status-taken { background: #E3F7E9; color: #1DB446; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.status-pending { background: #FFF1DE; color: #c77700; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.status-missed { background: #FDE7E7; color: #E53935; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.action-icon { cursor: pointer; margin-right: 8px; background: none; border: none; font-size: 15px; }
+.loading { text-align: center; color: #999; padding: 20px; }
+
+.hidden { display: none !important; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+.modal { background: #fff; border-radius: 14px; padding: 24px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
+.modal h3 { margin-top: 0; }
+.modal label { display: block; font-size: 13px; color: #555; margin-bottom: 12px; }
+.modal input, .modal select { width: 100%; padding: 9px 10px; border: 1px solid #ddd; border-radius: 8px; margin-top: 4px; font-size: 14px; }
+.days-wrap { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+.days-wrap label { display: flex; align-items: center; gap: 4px; width: auto; margin-bottom: 0; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+@media (max-width: 640px) {
+  .med-table { display: block; overflow-x: auto; white-space: nowrap; }
+}

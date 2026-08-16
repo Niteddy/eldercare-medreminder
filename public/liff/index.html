@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ElderCare MedReminder - แดชบอร์ดผู้ดูแล</title>
+<link rel="stylesheet" href="style.css" />
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">💊</span>
+      <div>
+        <h1>ElderCare MedReminder</h1>
+        <p>แดชบอร์ดผู้ดูแล — จัดการรายการยาและการแจ้งเตือนซ้ำ</p>
+      </div>
+    </div>
+    <div id="profile" class="profile"></div>
+  </header>
+
+  <main class="container">
+    <section class="cards">
+      <div class="card card-green">
+        <div>
+          <p class="card-label">อัตราการทานยาตรงเวลา</p>
+          <p class="card-value" id="onTimeRate">-</p>
+          <p class="card-sub">ทานครบตามรอบวันนี้</p>
+        </div>
+        <div class="card-icon">📈</div>
+      </div>
+      <div class="card card-blue">
+        <div>
+          <p class="card-label">ยาที่มีการ Repeat</p>
+          <p class="card-value" id="repeatCount">-</p>
+          <p class="card-sub" id="repeatSub">กำลังโหลด...</p>
+        </div>
+        <div class="card-icon">🔄</div>
+      </div>
+      <div class="card card-orange">
+        <div>
+          <p class="card-label">ผู้ดูแลที่เชื่อมต่อ</p>
+          <p class="card-value" id="caregiverName">-</p>
+          <p class="card-sub">พร้อมรับแจ้งเตือนเมื่อลืมทานยา</p>
+        </div>
+        <div class="card-icon">🔔</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>รายการยาและเงื่อนไขการกินซ้ำ (Repeat Schedule)</h2>
+        <button class="btn-primary" id="addMedBtn">+ เพิ่มรายการยาใหม่</button>
+      </div>
+
+      <table class="med-table">
+        <thead>
+          <tr>
+            <th>ชื่อยา</th>
+            <th>ขนาด/วิธีทาน</th>
+            <th>มื้ออาหาร</th>
+            <th>รูปแบบการซ้ำ</th>
+            <th>เวลาแจ้งเตือน</th>
+            <th>สถานะวันนี้</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="medTableBody">
+          <tr><td colspan="7" class="loading">กำลังโหลดข้อมูล...</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- Modal เพิ่ม/แก้ไขยา -->
+  <div id="medModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <h3 id="modalTitle">เพิ่มรายการยาใหม่</h3>
+      <form id="medForm">
+        <input type="hidden" id="medId" />
+        <label>ชื่อยา<input required id="medName" placeholder="เช่น ยาลดความดัน" /></label>
+        <label>ขนาด/วิธีทาน<input required id="dosage" placeholder="เช่น 1 เม็ด" /></label>
+        <label>คำแนะนำ<input id="instruction" placeholder="เช่น หลังอาหารเช้า" /></label>
+        <label>มื้ออาหาร
+          <select id="mealTag">
+            <option>มื้อเช้า</option>
+            <option>มื้อเที่ยง</option>
+            <option>มื้อเย็น</option>
+            <option>ก่อนนอน</option>
+          </select>
+        </label>
+        <label>เวลาแจ้งเตือน<input required type="time" id="time" /></label>
+        <label>รูปแบบการซ้ำ
+          <select id="repeatType">
+            <option value="DAILY">ทุกวัน (Daily)</option>
+            <option value="WEEKLY_CUSTOM">ระบุวันในสัปดาห์ (Weekly)</option>
+            <option value="INTERVAL">ทานแบบเว้นวัน (Interval Days)</option>
+          </select>
+        </label>
+        <div id="weeklyDaysWrap" class="days-wrap hidden">
+          <label><input type="checkbox" value="MON" class="dayChk"/>จ.</label>
+          <label><input type="checkbox" value="TUE" class="dayChk"/>อ.</label>
+          <label><input type="checkbox" value="WED" class="dayChk"/>พ.</label>
+          <label><input type="checkbox" value="THU" class="dayChk"/>พฤ.</label>
+          <label><input type="checkbox" value="FRI" class="dayChk"/>ศ.</label>
+          <label><input type="checkbox" value="SAT" class="dayChk"/>ส.</label>
+          <label><input type="checkbox" value="SUN" class="dayChk"/>อา.</label>
+        </div>
+        <label id="intervalWrap" class="hidden">ทานทุกๆ กี่วัน<input type="number" min="1" id="intervalDays" value="2" /></label>
+        <label>วันเริ่มต้น<input type="date" id="startDate" /></label>
+        <label>วันสิ้นสุด (เว้นว่าง = ไม่มีกำหนด)<input type="date" id="endDate" /></label>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="cancelBtn">ยกเลิก</button>
+          <button type="submit" class="btn-primary">บันทึก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
