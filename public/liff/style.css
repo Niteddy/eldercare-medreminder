@@ -59,6 +59,49 @@ body {
 .loading { text-align: center; color: #999; padding: 20px; }
 
 .hidden { display: none !important; }
+
+.link-banner {
+  background: #FFF8E1;
+  border: 1px solid #FFE29A;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.link-banner-text strong { display: block; margin-bottom: 4px; color: #7a5c00; }
+.link-banner-text p { margin: 0; font-size: 13px; color: #8a6d1a; }
+.link-banner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.linked-status {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.linked-pill {
+  background: #E3F7E9;
+  color: #17913a;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.linked-pill button {
+  background: none;
+  border: none;
+  color: #17913a;
+  cursor: pointer;
+  font-size: 12px;
+  text-decoration: underline;
+  padding: 0;
+}
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
 .modal { background: #fff; border-radius: 14px; padding: 24px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
 .modal h3 { margin-top: 0; }

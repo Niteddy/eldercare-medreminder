@@ -1,5 +1,6 @@
 let CURRENT_PATIENT_ID = null;
 let CURRENT_CAREGIVER_ID = null;
+let MY_LINE_PROFILE = null; // { userId, displayName } จาก LIFF login
 
 const dayLabels = { MON: 'จ.', TUE: 'อ.', WED: 'พ.', THU: 'พฤ.', FRI: 'ศ.', SAT: 'ส.', SUN: 'อา.' };
 const statusLabel = { TAKEN: ['ทานแล้ว', 'status-taken'], PENDING: ['รอทาน', 'status-pending'], MISSED: ['ลืมทานยา', 'status-missed'] };
@@ -14,6 +15,7 @@ async function initLiff() {
         return;
       }
       const profile = await liff.getProfile();
+      MY_LINE_PROFILE = { userId: profile.userId, displayName: profile.displayName };
       document.getElementById('profile').innerHTML = `
         <img src="${profile.pictureUrl || ''}" alt="" />
         <span>${profile.displayName}</span>`;
@@ -46,7 +48,75 @@ async function refreshDashboard() {
   CURRENT_CAREGIVER_ID = cg ? cg.caregiverId : null;
   document.getElementById('caregiverName').textContent = cg ? cg.name : 'ยังไม่ผูกบัญชี';
 
+  renderLinkStatus(data.patient);
   renderTable(data.meds, data.logsToday);
+}
+
+function renderLinkStatus(patient) {
+  const banner = document.getElementById('linkBanner');
+  const statusBox = document.getElementById('linkedStatus');
+
+  if (!MY_LINE_PROFILE) {
+    banner.classList.add('hidden');
+    statusBox.classList.add('hidden');
+    return;
+  }
+
+  const myId = MY_LINE_PROFILE.userId;
+  const isPatient = patient.lineUserId === myId;
+  const myCaregiverEntry = (patient.caregivers || []).find((c) => c.lineUserId === myId);
+
+  if (!isPatient && !myCaregiverEntry) {
+    banner.classList.remove('hidden');
+    statusBox.classList.add('hidden');
+  } else {
+    banner.classList.add('hidden');
+    statusBox.classList.remove('hidden');
+    const pills = [];
+    if (isPatient) {
+      pills.push(`<span class="linked-pill">🧓 บัญชีนี้คือผู้ป่วย (${patient.name}) <button onclick="unlinkPatient()">ยกเลิก</button></span>`);
+    }
+    if (myCaregiverEntry) {
+      pills.push(`<span class="linked-pill">🧑‍🤝‍🧑 บัญชีนี้คือผู้ดูแล (${myCaregiverEntry.name}) <button onclick="unlinkCaregiver('${myCaregiverEntry.caregiverId}')">ยกเลิก</button></span>`);
+    }
+    statusBox.innerHTML = pills.join('');
+  }
+}
+
+document.getElementById('linkAsPatientBtn').onclick = async () => {
+  if (!MY_LINE_PROFILE) return;
+  if (!confirm(`ยืนยันผูกบัญชี "${MY_LINE_PROFILE.displayName}" เป็นผู้ป่วยหรือไม่?\n(ระบบจะส่งข้อความแจ้งเตือนทานยามาที่บัญชีนี้)`)) return;
+
+  await fetch(`/api/patients/${CURRENT_PATIENT_ID}/link-patient`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lineUserId: MY_LINE_PROFILE.userId, name: MY_LINE_PROFILE.displayName })
+  });
+  refreshDashboard();
+};
+
+document.getElementById('linkAsCaregiverBtn').onclick = async () => {
+  if (!MY_LINE_PROFILE) return;
+  if (!confirm(`ยืนยันผูกบัญชี "${MY_LINE_PROFILE.displayName}" เป็นผู้ดูแลหรือไม่?\n(ระบบจะแจ้งเตือนมาที่บัญชีนี้เมื่อผู้ป่วยลืมทานยา)`)) return;
+
+  await fetch(`/api/patients/${CURRENT_PATIENT_ID}/link-caregiver`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lineUserId: MY_LINE_PROFILE.userId, name: MY_LINE_PROFILE.displayName })
+  });
+  refreshDashboard();
+};
+
+async function unlinkPatient() {
+  if (!confirm('ยกเลิกการผูกบัญชีผู้ป่วยนี้หรือไม่?')) return;
+  await fetch(`/api/patients/${CURRENT_PATIENT_ID}/unlink-patient`, { method: 'POST' });
+  refreshDashboard();
+}
+
+async function unlinkCaregiver(caregiverId) {
+  if (!confirm('ยกเลิกการผูกบัญชีผู้ดูแลนี้หรือไม่?')) return;
+  await fetch(`/api/patients/${CURRENT_PATIENT_ID}/caregivers/${caregiverId}/unlink`, { method: 'POST' });
+  refreshDashboard();
 }
 
 document.getElementById('editCaregiverBtn').onclick = async () => {
