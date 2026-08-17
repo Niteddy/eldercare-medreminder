@@ -210,6 +210,59 @@ app.delete('/api/medications/:medId', (req, res) => {
   res.status(204).end();
 });
 
+// ผูกบัญชี LINE (จาก LIFF login) เป็น "ผู้ป่วย" ของ patient รายนี้โดยตรงจากหน้าเว็บ
+app.post('/api/patients/:patientId/link-patient', (req, res) => {
+  const { patientId } = req.params;
+  const { lineUserId, name } = req.body;
+  if (!lineUserId) return res.status(400).json({ error: 'missing lineUserId' });
+
+  db.get('patients')
+    .find({ patientId })
+    .assign({ lineUserId, name: name || db.get('patients').find({ patientId }).value().name })
+    .write();
+
+  res.json(db.get('patients').find({ patientId }).value());
+});
+
+// ผูกบัญชี LINE (จาก LIFF login) เป็น "ผู้ดูแล" ของ patient รายนี้โดยตรงจากหน้าเว็บ
+app.post('/api/patients/:patientId/link-caregiver', (req, res) => {
+  const { patientId } = req.params;
+  const { lineUserId, name } = req.body;
+  if (!lineUserId) return res.status(400).json({ error: 'missing lineUserId' });
+
+  const patient = db.get('patients').find({ patientId }).value();
+  const existing = (patient.caregivers || []).find((c) => c.lineUserId === lineUserId);
+
+  if (existing) {
+    db.get('patients')
+      .find({ patientId })
+      .get('caregivers')
+      .find({ lineUserId })
+      .assign({ name: name || existing.name })
+      .write();
+  } else {
+    db.get('patients')
+      .find({ patientId })
+      .get('caregivers')
+      .push({ caregiverId: uuidv4(), name: name || 'ผู้ดูแล', lineUserId })
+      .write();
+  }
+
+  res.json(db.get('patients').find({ patientId }).value());
+});
+
+// เลิกผูกบัญชี (กรณีผูกผิดคน อยากรีเซ็ต)
+app.post('/api/patients/:patientId/unlink-patient', (req, res) => {
+  db.get('patients').find({ patientId: req.params.patientId }).assign({ lineUserId: null }).write();
+  res.json(db.get('patients').find({ patientId: req.params.patientId }).value());
+});
+
+app.post('/api/patients/:patientId/caregivers/:caregiverId/unlink', (req, res) => {
+  const { patientId, caregiverId } = req.params;
+  db.get('patients').find({ patientId }).get('caregivers').remove({ caregiverId }).write();
+  res.json(db.get('patients').find({ patientId }).value());
+});
+
 // แก้ชื่อผู้ดูแล (เผื่อทดสอบคนเดียวโดยไม่ต้องมีบัญชี LINE อีกเครื่อง)
 app.put('/api/patients/:patientId/caregivers/:caregiverId', (req, res) => {
   const { patientId, caregiverId } = req.params;
