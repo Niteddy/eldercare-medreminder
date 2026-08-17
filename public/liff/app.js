@@ -2,6 +2,16 @@ let CURRENT_PATIENT_ID = null;
 let CURRENT_CAREGIVER_ID = null;
 let MY_LINE_PROFILE = null; // { userId, displayName } จาก LIFF login
 
+/** แปลง ISO timestamp (เก็บเป็น UTC) ให้แสดงเป็นเวลาไทย (Asia/Bangkok) บนหน้าจอ */
+function formatBangkokTime(isoString) {
+  return new Date(isoString).toLocaleTimeString('th-TH', {
+    timeZone: 'Asia/Bangkok',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+}
+
 const dayLabels = { MON: 'จ.', TUE: 'อ.', WED: 'พ.', THU: 'พฤ.', FRI: 'ศ.', SAT: 'ส.', SUN: 'อา.' };
 const statusLabel = { TAKEN: ['ทานแล้ว', 'status-taken'], PENDING: ['รอทาน', 'status-pending'], MISSED: ['ลืมทานยา', 'status-missed'] };
 
@@ -176,7 +186,7 @@ function renderTable(meds, logsToday) {
         <td><span class="tag">${m.mealTag || '-'}</span></td>
         <td class="tag-repeat">🔄 ${repeatText}</td>
         <td>${m.time} น.</td>
-        <td><span class="${cls}">${label}${log && log.takenAt ? ' (' + log.takenAt.slice(11, 16) + ')' : ''}</span></td>
+        <td><span class="${cls}">${label}${log && log.takenAt ? ' (' + formatBangkokTime(log.takenAt) + ')' : ''}</span></td>
         <td>
           <button class="action-icon" title="แก้ไข" onclick="openEditModal('${m.medId}')">✏️</button>
           <button class="action-icon" title="ลบ" onclick="deleteMed('${m.medId}')">🗑️</button>
