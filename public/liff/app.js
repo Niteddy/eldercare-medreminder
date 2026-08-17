@@ -54,7 +54,10 @@ async function refreshDashboard() {
 
 function renderLinkStatus(patient) {
   const banner = document.getElementById('linkBanner');
+  const bannerTitle = document.getElementById('linkBannerTitle');
   const statusBox = document.getElementById('linkedStatus');
+  const patientBtn = document.getElementById('linkAsPatientBtn');
+  const caregiverBtn = document.getElementById('linkAsCaregiverBtn');
 
   if (!MY_LINE_PROFILE) {
     banner.classList.add('hidden');
@@ -66,20 +69,32 @@ function renderLinkStatus(patient) {
   const isPatient = patient.lineUserId === myId;
   const myCaregiverEntry = (patient.caregivers || []).find((c) => c.lineUserId === myId);
 
-  if (!isPatient && !myCaregiverEntry) {
-    banner.classList.remove('hidden');
-    statusBox.classList.add('hidden');
-  } else {
-    banner.classList.add('hidden');
-    statusBox.classList.remove('hidden');
-    const pills = [];
-    if (isPatient) {
-      pills.push(`<span class="linked-pill">🧓 บัญชีนี้คือผู้ป่วย (${patient.name}) <button onclick="unlinkPatient()">ยกเลิก</button></span>`);
-    }
-    if (myCaregiverEntry) {
-      pills.push(`<span class="linked-pill">🧑‍🤝‍🧑 บัญชีนี้คือผู้ดูแล (${myCaregiverEntry.name}) <button onclick="unlinkCaregiver('${myCaregiverEntry.caregiverId}')">ยกเลิก</button></span>`);
-    }
+  // แสดง pill ของบทบาทที่ผูกกับบัญชีนี้แล้ว
+  const pills = [];
+  if (isPatient) {
+    pills.push(`<span class="linked-pill">🧓 บัญชีนี้คือผู้ป่วย (${patient.name}) <button onclick="unlinkPatient()">ยกเลิก</button></span>`);
+  }
+  if (myCaregiverEntry) {
+    pills.push(`<span class="linked-pill">🧑‍🤝‍🧑 บัญชีนี้คือผู้ดูแล (${myCaregiverEntry.name}) <button onclick="unlinkCaregiver('${myCaregiverEntry.caregiverId}')">ยกเลิก</button></span>`);
+  }
+  if (pills.length) {
     statusBox.innerHTML = pills.join('');
+    statusBox.classList.remove('hidden');
+  } else {
+    statusBox.classList.add('hidden');
+  }
+
+  // แสดงปุ่มเฉพาะบทบาทที่ "บัญชีนี้" ยังไม่ได้ผูก (ผูกได้มากกว่า 1 บทบาทถ้าต้องการ)
+  patientBtn.classList.toggle('hidden', isPatient);
+  caregiverBtn.classList.toggle('hidden', !!myCaregiverEntry);
+
+  if (isPatient && myCaregiverEntry) {
+    banner.classList.add('hidden');
+  } else {
+    banner.classList.remove('hidden');
+    bannerTitle.textContent = pills.length
+      ? 'ผูกบทบาทเพิ่มเติมให้บัญชีนี้ได้ (ถ้าต้องการทดสอบคนเดียว)'
+      : 'บัญชี LINE นี้ยังไม่ได้ผูกบทบาทกับระบบ';
   }
 }
 
