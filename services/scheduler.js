@@ -12,8 +12,33 @@ const DAY_KEYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const SNOOZE_AFTER_MIN = 15; // สะกิดซ้ำหลัง 15 นาที
 const ESCALATE_AFTER_MIN = 30; // แจ้งผู้ดูแลหลัง 30 นาที
 
-function todayStr(d = new Date()) {
-  return d.toISOString().slice(0, 10); // YYYY-MM-DD
+/**
+ * คำนวณวันที่และเวลาปัจจุบัน "ตามเวลาไทย" เสมอ ไม่ว่าเซิร์ฟเวอร์จะตั้ง timezone ระบบเป็นอะไร
+ * (เซิร์ฟเวอร์บน Render ใช้ UTC เป็นค่าเริ่มต้น ถ้าใช้ new Date().toTimeString() ตรงๆ จะได้เวลาเพี้ยนไป 7 ชั่วโมง)
+ */
+function getBangkokNow() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).formatToParts(new Date());
+
+  const map = {};
+  parts.forEach((p) => (map[p.type] = p.value));
+
+  return {
+    date: `${map.year}-${map.month}-${map.day}`, // YYYY-MM-DD ตามเวลาไทย
+    hhmm: `${map.hour}:${map.minute}`, // HH:MM ตามเวลาไทย
+    dayOfWeek: new Date(`${map.year}-${map.month}-${map.day}T00:00:00+07:00`).getUTCDay()
+  };
+}
+
+function todayStr() {
+  return getBangkokNow().date;
 }
 
 /** ตรวจว่ายาตัวนี้ต้องกินในวันที่ dateStr หรือไม่ ตาม repeatType */
@@ -43,7 +68,7 @@ function isDueOnDate(med, dateStr) {
 
 /** [เที่ยงคืนทุกวัน] สร้าง MedicationLog ของวันนี้ ตามเงื่อนไข Repeat ของยาทุกตัว */
 function generateTodayLogs() {
-  const date = todayStr();
+  const date = getBangkokNow().date;
   const meds = db.get('medications').value();
 
   meds.forEach((med) => {
@@ -76,9 +101,7 @@ function generateTodayLogs() {
 
 /** [ทุกนาที] ส่งแจ้งเตือนหลักเมื่อถึงเวลานัดหมายพอดี (group ตามผู้ป่วย+เวลา เพื่อรวมยาในมื้อเดียวกัน) */
 async function sendDueReminders() {
-  const now = new Date();
-  const hhmm = now.toTimeString().slice(0, 5); // HH:MM
-  const date = todayStr(now);
+  const { date, hhmm } = getBangkokNow();
 
   const allTodayLogs = db.get('medicationLogs').filter({ date }).value();
   const pendingAll = allTodayLogs.filter((l) => l.status === 'PENDING');
@@ -114,7 +137,7 @@ async function sendDueReminders() {
     await pushMessage(patient.lineUserId, flex);
 
     logs.forEach((l) => {
-      db.get('medicationLogs').find({ logId: l.logId }).assign({ remindedAt: now.toISOString() }).write();
+      db.get('medicationLogs').find({ logId: l.logId }).assign({ remindedAt: new Date().toISOString() }).write();
     });
 
     console.log(`[scheduler] ส่งแจ้งเตือน ${mealTag} ให้ ${patient.name} แล้ว`);
@@ -124,7 +147,7 @@ async function sendDueReminders() {
 /** [ทุกนาที] ตรวจ log ที่ยัง PENDING เกิน 15 นาที -> สะกิดซ้ำ / เกิน 30 นาที -> แจ้งผู้ดูแล */
 async function checkSnoozeAndEscalation() {
   const now = new Date();
-  const date = todayStr(now);
+  const date = getBangkokNow().date;
   const pending = db.get('medicationLogs').filter({ date, status: 'PENDING' }).value().filter((l) => l.remindedAt);
 
   for (const log of pending) {
@@ -165,4 +188,4 @@ function start() {
   console.log('[scheduler] cron jobs เริ่มทำงานแล้ว (timezone Asia/Bangkok)');
 }
 
-module.exports = { start, generateTodayLogs, sendDueReminders, checkSnoozeAndEscalation, isDueOnDate };
+module.exports = { start, generateTodayLogs, sendDueReminders, checkSnoozeAndEscalation, isDueOnDate, getBangkokNow };

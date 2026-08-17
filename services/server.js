@@ -49,17 +49,36 @@ async function handleLineEvent(event) {
   if (event.type === 'message' && event.message.type === 'text' && userId) {
     if (event.message.text.trim() === 'ผูกบัญชีผู้ดูแล') {
       const patient = db.get('patients').first().value();
-      const already = (patient.caregivers || []).some((c) => c.lineUserId === userId);
-      if (!already) {
+
+      // ดึงชื่อจริงจากโปรไฟล์ LINE ของผู้ที่กำลังผูกบัญชี แทนการ hardcode ชื่อ
+      let displayName = 'ผู้ดูแล';
+      try {
+        const profile = await client.getProfile(userId);
+        if (profile && profile.displayName) displayName = profile.displayName;
+      } catch (e) {
+        console.warn('[webhook] ดึงโปรไฟล์ LINE ไม่สำเร็จ ใช้ชื่อ default แทน:', e.message);
+      }
+
+      const existing = (patient.caregivers || []).find((c) => c.lineUserId === userId);
+      if (!existing) {
         db.get('patients')
           .find({ patientId: patient.patientId })
           .get('caregivers')
-          .push({ caregiverId: uuidv4(), name: 'ผู้ดูแล', lineUserId: userId })
+          .push({ caregiverId: uuidv4(), name: displayName, lineUserId: userId })
+          .write();
+      } else if (existing.name !== displayName) {
+        // เคยผูกไว้แล้วแต่ชื่อยังไม่ตรง (เช่นเคยเป็นชื่อ default) -> อัปเดตให้ตรงชื่อ LINE ปัจจุบัน
+        db.get('patients')
+          .find({ patientId: patient.patientId })
+          .get('caregivers')
+          .find({ lineUserId: userId })
+          .assign({ name: displayName })
           .write();
       }
+
       await client.pushMessage(userId, {
         type: 'text',
-        text: `ผูกบัญชีผู้ดูแลของคุณ${patient.name} เรียบร้อยแล้วค่ะ ✅\nเปิดแดชบอร์ดได้จากเมนูด้านล่างเลยค่ะ`
+        text: `ผูกบัญชีผู้ดูแลของคุณ${patient.name} เรียบร้อยแล้วค่ะ คุณ${displayName} ✅\nเปิดแดชบอร์ดได้จากเมนูด้านล่างเลยค่ะ`
       });
     }
     return;
@@ -117,7 +136,7 @@ app.post('/api/patients/:patientId/medications', (req, res) => {
     repeatType: req.body.repeatType || 'DAILY',
     repeatDays: req.body.repeatDays || ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
     intervalDays: req.body.intervalDays || 1,
-    startDate: req.body.startDate || new Date().toISOString().slice(0, 10),
+    startDate: req.body.startDate || scheduler.getBangkokNow().date,
     endDate: req.body.endDate || null,
     isActive: true
   };
@@ -125,7 +144,7 @@ app.post('/api/patients/:patientId/medications', (req, res) => {
 
   // สร้างคิวแจ้งเตือนของ "วันนี้" ให้ทันที ถ้ายาตัวนี้ต้องกินวันนี้พอดี
   // (ไม่ต้องรอ cron เที่ยงคืน หรือรอเซิร์ฟเวอร์ restart)
-  const today = new Date().toISOString().slice(0, 10);
+  const today = scheduler.getBangkokNow().date;
   if (scheduler.isDueOnDate(med, today)) {
     const exists = db.get('medicationLogs').find({ medId: med.medId, date: today }).value();
     if (!exists) {
@@ -155,7 +174,7 @@ app.put('/api/medications/:medId', (req, res) => {
   const med = db.get('medications').find({ medId: req.params.medId }).value();
 
   // ซิงก์คิวของ "วันนี้" ให้ตรงกับข้อมูลล่าสุดทันที (ถ้ายังไม่เคยแจ้งเตือนไปแล้ว)
-  const today = new Date().toISOString().slice(0, 10);
+  const today = scheduler.getBangkokNow().date;
   const todayLog = db.get('medicationLogs').find({ medId: med.medId, date: today }).value();
   const dueToday = scheduler.isDueOnDate(med, today);
 
@@ -191,10 +210,75 @@ app.delete('/api/medications/:medId', (req, res) => {
   res.status(204).end();
 });
 
+// ผูกบัญชี LINE (จาก LIFF login) เป็น "ผู้ป่วย" ของ patient รายนี้โดยตรงจากหน้าเว็บ
+app.post('/api/patients/:patientId/link-patient', (req, res) => {
+  const { patientId } = req.params;
+  const { lineUserId, name } = req.body;
+  if (!lineUserId) return res.status(400).json({ error: 'missing lineUserId' });
+
+  db.get('patients')
+    .find({ patientId })
+    .assign({ lineUserId, name: name || db.get('patients').find({ patientId }).value().name })
+    .write();
+
+  res.json(db.get('patients').find({ patientId }).value());
+});
+
+// ผูกบัญชี LINE (จาก LIFF login) เป็น "ผู้ดูแล" ของ patient รายนี้โดยตรงจากหน้าเว็บ
+app.post('/api/patients/:patientId/link-caregiver', (req, res) => {
+  const { patientId } = req.params;
+  const { lineUserId, name } = req.body;
+  if (!lineUserId) return res.status(400).json({ error: 'missing lineUserId' });
+
+  const patient = db.get('patients').find({ patientId }).value();
+  const existing = (patient.caregivers || []).find((c) => c.lineUserId === lineUserId);
+
+  if (existing) {
+    db.get('patients')
+      .find({ patientId })
+      .get('caregivers')
+      .find({ lineUserId })
+      .assign({ name: name || existing.name })
+      .write();
+  } else {
+    db.get('patients')
+      .find({ patientId })
+      .get('caregivers')
+      .push({ caregiverId: uuidv4(), name: name || 'ผู้ดูแล', lineUserId })
+      .write();
+  }
+
+  res.json(db.get('patients').find({ patientId }).value());
+});
+
+// เลิกผูกบัญชี (กรณีผูกผิดคน อยากรีเซ็ต)
+app.post('/api/patients/:patientId/unlink-patient', (req, res) => {
+  db.get('patients').find({ patientId: req.params.patientId }).assign({ lineUserId: null }).write();
+  res.json(db.get('patients').find({ patientId: req.params.patientId }).value());
+});
+
+app.post('/api/patients/:patientId/caregivers/:caregiverId/unlink', (req, res) => {
+  const { patientId, caregiverId } = req.params;
+  db.get('patients').find({ patientId }).get('caregivers').remove({ caregiverId }).write();
+  res.json(db.get('patients').find({ patientId }).value());
+});
+
+// แก้ชื่อผู้ดูแล (เผื่อทดสอบคนเดียวโดยไม่ต้องมีบัญชี LINE อีกเครื่อง)
+app.put('/api/patients/:patientId/caregivers/:caregiverId', (req, res) => {
+  const { patientId, caregiverId } = req.params;
+  db.get('patients')
+    .find({ patientId })
+    .get('caregivers')
+    .find({ caregiverId })
+    .assign({ name: req.body.name })
+    .write();
+  res.json(db.get('patients').find({ patientId }).value());
+});
+
 // สรุปสถานะวันนี้ (สำหรับการ์ดแดชบอร์ด: อัตราทานตรงเวลา / จำนวน repeat / ผู้ดูแล)
 app.get('/api/patients/:patientId/dashboard', (req, res) => {
   const { patientId } = req.params;
-  const date = new Date().toISOString().slice(0, 10);
+  const date = scheduler.getBangkokNow().date;
   const meds = db.get('medications').filter({ patientId }).value();
   const logsToday = db.get('medicationLogs').filter({ patientId, date }).value();
   const patient = db.get('patients').find({ patientId }).value();
