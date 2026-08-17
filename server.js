@@ -136,7 +136,7 @@ app.post('/api/patients/:patientId/medications', (req, res) => {
     repeatType: req.body.repeatType || 'DAILY',
     repeatDays: req.body.repeatDays || ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
     intervalDays: req.body.intervalDays || 1,
-    startDate: req.body.startDate || new Date().toISOString().slice(0, 10),
+    startDate: req.body.startDate || scheduler.getBangkokNow().date,
     endDate: req.body.endDate || null,
     isActive: true
   };
@@ -144,7 +144,7 @@ app.post('/api/patients/:patientId/medications', (req, res) => {
 
   // สร้างคิวแจ้งเตือนของ "วันนี้" ให้ทันที ถ้ายาตัวนี้ต้องกินวันนี้พอดี
   // (ไม่ต้องรอ cron เที่ยงคืน หรือรอเซิร์ฟเวอร์ restart)
-  const today = new Date().toISOString().slice(0, 10);
+  const today = scheduler.getBangkokNow().date;
   if (scheduler.isDueOnDate(med, today)) {
     const exists = db.get('medicationLogs').find({ medId: med.medId, date: today }).value();
     if (!exists) {
@@ -174,7 +174,7 @@ app.put('/api/medications/:medId', (req, res) => {
   const med = db.get('medications').find({ medId: req.params.medId }).value();
 
   // ซิงก์คิวของ "วันนี้" ให้ตรงกับข้อมูลล่าสุดทันที (ถ้ายังไม่เคยแจ้งเตือนไปแล้ว)
-  const today = new Date().toISOString().slice(0, 10);
+  const today = scheduler.getBangkokNow().date;
   const todayLog = db.get('medicationLogs').find({ medId: med.medId, date: today }).value();
   const dueToday = scheduler.isDueOnDate(med, today);
 
@@ -278,7 +278,7 @@ app.put('/api/patients/:patientId/caregivers/:caregiverId', (req, res) => {
 // สรุปสถานะวันนี้ (สำหรับการ์ดแดชบอร์ด: อัตราทานตรงเวลา / จำนวน repeat / ผู้ดูแล)
 app.get('/api/patients/:patientId/dashboard', (req, res) => {
   const { patientId } = req.params;
-  const date = new Date().toISOString().slice(0, 10);
+  const date = scheduler.getBangkokNow().date;
   const meds = db.get('medications').filter({ patientId }).value();
   const logsToday = db.get('medicationLogs').filter({ patientId, date }).value();
   const patient = db.get('patients').find({ patientId }).value();
