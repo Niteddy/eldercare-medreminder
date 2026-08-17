@@ -80,11 +80,14 @@ async function sendDueReminders() {
   const hhmm = now.toTimeString().slice(0, 5); // HH:MM
   const date = todayStr(now);
 
-  const pending = db
-    .get('medicationLogs')
-    .filter({ date, status: 'PENDING', scheduledTime: hhmm })
-    .value()
-    .filter((l) => !l.remindedAt);
+  const allTodayLogs = db.get('medicationLogs').filter({ date }).value();
+  const pendingAll = allTodayLogs.filter((l) => l.status === 'PENDING');
+  // Heartbeat log: พิมพ์ทุกนาทีเสมอ เพื่อยืนยันว่า cron ยังทำงานอยู่จริง และให้เห็นเวลาที่ระบบเห็น ณ ขณะนั้น
+  console.log(
+    `[cron-tick] เวลาเซิร์ฟเวอร์ตอนนี้ = ${hhmm} (${date}) | ยาที่ยังรอทานวันนี้ทั้งหมด = ${pendingAll.length} | เวลานัดที่รอ = [${pendingAll.map((l) => l.scheduledTime).join(', ')}]`
+  );
+
+  const pending = pendingAll.filter((l) => l.scheduledTime === hhmm && !l.remindedAt);
 
   const byPatientTime = {};
   pending.forEach((log) => {
