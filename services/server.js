@@ -113,6 +113,51 @@ app.get('/api/config', (req, res) => {
   res.json({ liffId: process.env.LIFF_ID || '' });
 });
 
+// หน้าอ่านออกเสียงข้อความแจ้งเตือน (เปิดจากปุ่ม "🔊 ฟังเสียงอ่าน" ใน LINE)
+// ใช้ Web Speech API ของเบราว์เซอร์ ไม่มีค่าใช้จ่าย ไม่ต้องใช้ API key ภายนอก
+app.get('/read-aloud', (req, res) => {
+  const text = (req.query.text || 'ไม่มีข้อความ').toString();
+  res.send(`<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ฟังเสียงอ่านแจ้งเตือน</title>
+<style>
+  body { font-family: "Noto Sans Thai", sans-serif; background: #f3f6f4; margin: 0; padding: 24px; text-align: center; }
+  .card { background: #fff; border-radius: 16px; padding: 28px 20px; max-width: 420px; margin: 40px auto; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+  .icon { font-size: 48px; }
+  p.text { font-size: 18px; line-height: 1.7; color: #333; margin: 16px 0 24px; }
+  button { background: #1DB446; color: #fff; border: none; padding: 16px 32px; border-radius: 30px; font-size: 18px; font-weight: bold; cursor: pointer; }
+  button:active { background: #17913a; }
+  .hint { color: #999; font-size: 13px; margin-top: 14px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🔊</div>
+    <p class="text">${text.replace(/</g, '&lt;')}</p>
+    <button id="playBtn" onclick="speak()">▶️ กดเพื่อฟังเสียงอ่าน</button>
+    <p class="hint">กดปุ่มเพื่อให้อ่านออกเสียงข้อความข้างต้น</p>
+  </div>
+  <script>
+    const text = ${JSON.stringify(text)};
+    function speak() {
+      if (!('speechSynthesis' in window)) {
+        alert('อุปกรณ์นี้ไม่รองรับการอ่านออกเสียง');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'th-TH';
+      utter.rate = 0.9;
+      window.speechSynthesis.speak(utter);
+    }
+  </script>
+</body>
+</html>`);
+});
+
 // รายชื่อผู้ป่วย (ใช้ในหน้าแดชบอร์ด)
 app.get('/api/patients', (req, res) => {
   res.json(db.get('patients').value());
