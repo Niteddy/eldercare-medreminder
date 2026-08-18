@@ -9,8 +9,8 @@ const {
 } = require('./lineClient');
 
 const DAY_KEYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-const SNOOZE_AFTER_MIN = 15; // สะกิดซ้ำหลัง 15 นาที
-const ESCALATE_AFTER_MIN = 30; // แจ้งผู้ดูแลหลัง 30 นาที
+const SNOOZE_AFTER_MIN = 5; // สะกิดซ้ำหลัง 5 นาที
+const ESCALATE_AFTER_MIN = 10; // แจ้งผู้ดูแลหลัง 10 นาที (ตามที่ผู้ใช้ระบุ)
 
 /**
  * คำนวณวันที่และเวลาปัจจุบัน "ตามเวลาไทย" เสมอ ไม่ว่าเซิร์ฟเวอร์จะตั้ง timezone ระบบเป็นอะไร
@@ -165,7 +165,7 @@ async function checkSnoozeAndEscalation() {
     }
 
     if (minutesPassed >= ESCALATE_AFTER_MIN && !log.escalatedAt) {
-      const flex = buildEscalationFlex({ patientName: patient.name, mealTag: med.mealTag, time: log.scheduledTime });
+      const flex = buildEscalationFlex({ patientName: patient.name, mealTag: med.mealTag, time: log.scheduledTime, escalateAfterMin: ESCALATE_AFTER_MIN });
       for (const cg of patient.caregivers || []) {
         await pushMessage(cg.lineUserId, flex);
       }
