@@ -348,7 +348,15 @@ app.post('/api/simulate/:type', async (req, res) => {
   res.json({ ok: true });
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ ElderCare MedReminder server running on port ${PORT}`);
-  scheduler.start();
+async function startServer() {
+  await db.initDb(); // ต้องเชื่อมต่อฐานข้อมูล (MongoDB หรือไฟล์สำรอง) ให้เสร็จก่อน ค่อยเริ่มรับ request
+  app.listen(PORT, () => {
+    console.log(`✅ ElderCare MedReminder server running on port ${PORT}`);
+    scheduler.start();
+  });
+}
+
+startServer().catch((err) => {
+  console.error('[server] เริ่มเซิร์ฟเวอร์ไม่สำเร็จ:', err);
+  process.exit(1);
 });
